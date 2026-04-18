@@ -1,0 +1,51 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "error": "Bir hata oluştu",
+    "success": "Başarılı"
+  },
+  "nav": {
+    "login": "Giriş Yap",
+    "register": "Kayıt Ol",
+    "dashboard": "Yönetim Paneli",
+    "features": "Özellikler",
+    "pricing": "Fiyatlandırma",
+    "contact": "İletişim",
+    "templates": "Şablonlar"
+  },
+  "footer": {
+    "rights": "Tüm hakları saklıdır.",
+    "privacy": "Gizlilik Politikası",
+    "terms": "Kullanım Şartları",
+    "cookies": "Çerezler"
+  },
+  "home": {
+    "hero_eyebrow": "GELECEĞİN AKADEMİK STANDARDI",
+    "hero_title": "Tez ve Makale Formatlamak Hiç Bu Kadar Kolay Olmadı",
+    "hero_copy": "FormatEdit ile üniversite şablonlarına saatler harcamayın. Saniyeler içinde yüzde yüz uyumlu tez formatınızı oluşturun, APA ve IEEE stilleri entegre yapay zeka ile otomatik düzenlensin.",
+    "cta_primary": "Hemen Ücretsiz Başlayın",
+    "cta_secondary": "Nasıl Çalışır?",
+    "features_title": "Akademik Sürecinizi Hızlandırın",
+    "feature_1_title": "Otonom Düzenleme",
+    "feature_1_desc": "Tüm sayfa boşlukları, indeksler ve başlık hiyerarşileri yapay zeka yardımıyla tek tıkla şablonunuza uyarlanır.",
+    "feature_2_title": "Canlı Önizleme",
+    "feature_2_desc": "Düzenlemelerinizi anında görün. Split-view moduyla formatınızın nasıl tepki verdiğini canlı canlı inceleyin.",
+    "feature_3_title": "Gelişmiş Kaynakça",
+    "feature_3_desc": "Referanslarınız APA, Chicago, Vancouver gibi dilediğiniz stile anında dönüştürülüp metin içine entegre edilir."
+  },
+  "auth": {
+    "login_title": "Hesabınıza Giriş Yapın",
+    "login_subtitle": "Akademik dokümanlarınızı yönetmeye devam edin.",
+    "register_title": "Yeni Hesap Oluşturun",
+    "register_subtitle": "FormatEdit dünyasına katılın.",
+    "email": "E-posta Adresi",
+    "password": "Şifre",
+    "login_btn": "Giriş",
+    "register_btn": "Kayıt Ol",
+    "forgot_pass": "Şifremi Unuttum",
+    "no_account": "Hesabınız yok mu? Kayıt olun",
+    "has_account": "Zaten hesabınız var mı? Giriş yapın"
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TYPE "LegalDocumentSlug" ADD VALUE IF NOT EXISTS 'GDPR';

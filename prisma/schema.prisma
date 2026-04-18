@@ -1,0 +1,1174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  EXPERT
+  SUPER_ADMIN
+}
+
+enum AcademicTitle {
+  UNDERGRADUATE
+  MASTERS_STUDENT
+  DOCTORAL_STUDENT
+  RESEARCH_ASSISTANT
+  LECTURER
+  ASSISTANT_PROFESSOR
+  ASSOCIATE_PROFESSOR
+  PROFESSOR
+  OTHER
+}
+
+enum OAuthProvider {
+  GOOGLE
+}
+
+enum TwoFactorMethodType {
+  WHATSAPP
+  TELEGRAM
+  AUTHENTICATOR
+}
+
+enum ThemePreference {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+}
+
+enum DocumentVersionType {
+  RAW
+  WORKING
+  FORMATTED
+  REVISION
+  PREVIEW
+  FINAL
+  ARCHIVE
+}
+
+enum DocumentScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+  SKIPPED
+}
+
+enum DocumentUploadSessionStatus {
+  CREATED
+  UPLOADED
+  COMPLETED
+  CANCELLED
+}
+
+enum CitationStyleFamily {
+  AUTHOR_DATE
+  NUMERIC
+  NOTES_BIBLIOGRAPHY
+}
+
+enum CitationValidationSeverity {
+  ERROR
+  WARNING
+  INFO
+}
+
+enum AnalysisTicketStatus {
+  OPEN
+  ASSIGNED
+  QUOTED
+  AWAITING_PAYMENT
+  IN_PROGRESS
+  DELIVERED
+  REVISION_REQUESTED
+  CLOSED
+  CANCELLED
+}
+
+enum AnalysisTicketDeliveryMode {
+  STANDARD
+  EXPRESS
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYPAL
+}
+
+enum PaymentType {
+  ONE_TIME
+  SUBSCRIPTION
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionInterval {
+  MONTH
+  YEAR
+}
+
+enum CouponDiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model User {
+  id                            String                   @id @default(cuid())
+  email                         String                   @unique
+  passwordHash                  String
+  fullName                      String?
+  role                          UserRole                 @default(USER)
+  academicTitle                 AcademicTitle
+  preferredLanguage             String                   @default("tr")
+  themePreference               ThemePreference          @default(SYSTEM)
+  isEmailVerified               Boolean                  @default(false)
+  phoneNumber                   String?
+  telegramChatId                String?
+  country                       String?
+  deletedAt                     DateTime?
+  anonymizedAt                  DateTime?
+  createdAt                     DateTime                 @default(now())
+  updatedAt                     DateTime                 @updatedAt
+  refreshTokens                 RefreshToken[]
+  oauthAccounts                 OAuthAccount[]
+  twoFactorMethods              TwoFactorMethod[]
+  notificationPreference        NotificationPreference?
+  notificationEventPreferences  NotificationEventPreference[]
+  notifications                 Notification[]
+  initiatedImpersonationSessions ImpersonationSession[]  @relation("InitiatedImpersonationSessions")
+  targetImpersonationSessions   ImpersonationSession[]   @relation("TargetImpersonationSessions")
+  auditLogs                     AuditLog[]
+  documents                     Document[]
+  documentUploadSessions        DocumentUploadSession[]
+  createdTemplates              Template[]               @relation("CreatedTemplates")
+  userTemplates                 UserTemplate[]
+  analysisTickets               AnalysisTicket[]          @relation("CreatedAnalysisTickets")
+  assignedAnalysisTickets       AnalysisTicket[]          @relation("AssignedAnalysisTickets")
+  uploadedTicketFiles           TicketFile[]              @relation("UploadedTicketFiles")
+  sentTicketMessages            TicketMessage[]           @relation("SentTicketMessages")
+  ndaAgreements                 NdaAgreement[]            @relation("NdaAgreements")
+  expertProfile                 ExpertProfile?
+  payments                      Payment[]
+  subscriptions                 Subscription[]
+  studentVerifications          StudentVerification[]
+  invoices                      Invoice[]
+  supportTickets                SupportTicket[]          @relation("SupportTicketsCreated")
+  sentSupportMessages           SupportMessage[]         @relation("SupportMessagesSent")
+  affiliate                     Affiliate?
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model OAuthAccount {
+  id                String        @id @default(cuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+  providerEmail     String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model TwoFactorMethod {
+  id         String              @id @default(cuid())
+  userId     String
+  type       TwoFactorMethodType
+  label      String?
+  secret     String?
+  isVerified Boolean             @default(false)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ImpersonationSession {
+  id           String   @id @default(cuid())
+  adminId      String
+  targetUserId String
+  reason       String
+  startedAt    DateTime @default(now())
+  endedAt      DateTime?
+  lastActiveAt DateTime @default(now())
+  admin        User     @relation("InitiatedImpersonationSessions", fields: [adminId], references: [id], onDelete: Cascade)
+  targetUser   User     @relation("TargetImpersonationSessions", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([targetUserId])
+}
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  emailEnabled    Boolean  @default(true)
+  inAppEnabled    Boolean  @default(true)
+  whatsappEnabled Boolean  @default(false)
+  telegramEnabled Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id           String         @id @default(cuid())
+  eventType    String
+  category     String
+  actorType    AuditActorType @default(USER)
+  actorUserId  String?
+  actorRole    UserRole?
+  entityType   String?
+  entityId     String?
+  targetUserId String?
+  route        String?
+  method       String?
+  statusCode   Int?
+  ipAddress    String?
+  userAgent    String?
+  requestId    String?
+  metadata     Json?
+  createdAt    DateTime       @default(now())
+  actorUser    User?          @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([eventType])
+  @@index([category])
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([createdAt])
+}
+
+model AuditRetentionSetting {
+  id         String   @id @default("default")
+  retentionDays Int   @default(180)
+  isEnabled  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CitationStyle {
+  id          String               @id @default(cuid())
+  slug        String               @unique
+  name        String
+  family      CitationStyleFamily
+  description String?
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  citations   Citation[]
+  validations CitationValidation[]
+
+  @@index([family])
+  @@index([isActive])
+}
+
+model Citation {
+  id                String          @id @default(cuid())
+  documentId        String
+  documentVersionId String
+  citationStyleId   String?
+  sourceOrder       Int             @default(0)
+  rawText           String
+  normalizedText    String?
+  citationKey       String?
+  parsedData        Json?
+  confidenceScore   Float?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  document          Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version           DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  citationStyle     CitationStyle?   @relation(fields: [citationStyleId], references: [id], onDelete: SetNull)
+  validations       CitationValidation[]
+
+  @@index([documentId])
+  @@index([documentVersionId])
+  @@index([citationStyleId])
+  @@index([sourceOrder])
+  @@unique([documentVersionId, sourceOrder])
+}
+
+model CitationValidation {
+  id                String                     @id @default(cuid())
+  documentId        String
+  documentVersionId String
+  citationId        String?
+  citationStyleId   String?
+  severity          CitationValidationSeverity
+  validationType    String
+  code              String
+  message           String
+  fieldPath         String?
+  metadata          Json?
+  isResolved        Boolean                    @default(false)
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  document          Document                   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version           DocumentVersion            @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  citation          Citation?                  @relation(fields: [citationId], references: [id], onDelete: SetNull)
+  citationStyle     CitationStyle?             @relation(fields: [citationStyleId], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([documentVersionId])
+  @@index([citationId])
+  @@index([citationStyleId])
+  @@index([severity])
+  @@index([isResolved])
+}
+
+model Document {
+  id                String             @id @default(cuid())
+  userId            String
+  title             String
+  originalFileName  String
+  mimeType          String
+  sizeBytes         Int
+  currentScanStatus DocumentScanStatus @default(PENDING)
+  lastScanDetails   Json?
+  processingProgress Int              @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions          DocumentVersion[]
+  sections          DocumentSection[]
+  citations         Citation[]
+  citationValidations CitationValidation[]
+  uploadSessions    DocumentUploadSession[]
+  payments          Payment[]
+
+  @@index([userId])
+  @@index([currentScanStatus])
+}
+
+model DocumentVersion {
+  id          String              @id @default(cuid())
+  documentId  String
+  type        DocumentVersionType
+  label       String?
+  storageKey  String?
+  contentType String?
+  sizeBytes   Int?
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+  document    Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sections    DocumentSection[]
+  citations   Citation[]
+  citationValidations CitationValidation[]
+
+  @@index([documentId])
+  @@index([type])
+}
+
+model DocumentSection {
+  id                String           @id @default(cuid())
+  documentId        String
+  documentVersionId String?
+  parentSectionId   String?
+  sectionType       String
+  title             String?
+  content           Json?
+  orderIndex        Int              @default(0)
+  level             Int?
+  confidenceScore   Float?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  document          Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version           DocumentVersion? @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
+  parentSection     DocumentSection? @relation("DocumentSectionTree", fields: [parentSectionId], references: [id], onDelete: SetNull)
+  childSections     DocumentSection[] @relation("DocumentSectionTree")
+
+  @@index([documentId])
+  @@index([documentVersionId])
+  @@index([parentSectionId])
+}
+
+model DocumentSecuritySetting {
+  id                 String   @id @default("default")
+  maxUploadSizeBytes Int      @default(10485760)
+  clamAvEnabled      Boolean  @default(false)
+  virusTotalEnabled  Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model DocumentUploadSession {
+  id         String                      @id @default(cuid())
+  userId     String
+  documentId String?
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  storageKey String
+  status     DocumentUploadSessionStatus @default(CREATED)
+  progress   Int                         @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime                    @default(now())
+  updatedAt  DateTime                    @updatedAt
+  user       User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document?                   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([status])
+}
+
+model Template {
+  id                   String         @id @default(cuid())
+  slug                 String         @unique
+  name                 String
+  description          String?
+  category             String
+  workType             String
+  isActive             Boolean        @default(true)
+  isArchived           Boolean        @default(false)
+  version              Int            @default(1)
+  usageCount           Int            @default(0)
+  templateParameters   Json
+  createdByUserId      String?
+  sourceUserTemplateId String?
+  previousVersionId    String?
+  previousVersion      Template?      @relation("TemplateVersions", fields: [previousVersionId], references: [id], onDelete: SetNull)
+  nextVersions         Template[]     @relation("TemplateVersions")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  createdByUser        User?          @relation("CreatedTemplates", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  userTemplates        UserTemplate[]
+
+  @@index([category])
+  @@index([workType])
+  @@index([isActive])
+  @@index([isArchived])
+  @@index([previousVersionId])
+}
+
+model UserTemplate {
+  id                 String    @id @default(cuid())
+  userId             String
+  baseTemplateId     String?
+  name               String
+  description        String?
+  isArchived         Boolean   @default(false)
+  isPromoted         Boolean   @default(false)
+  usageCount         Int       @default(0)
+  templateParameters Json
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseTemplate       Template? @relation(fields: [baseTemplateId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([baseTemplateId])
+  @@index([isArchived])
+  @@index([isPromoted])
+}
+
+model WorkTypeSetting {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  label              String
+  isActive           Boolean  @default(true)
+  requiredFixedPages Json
+  optionalFixedPages Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// ---------- Batch 10: Analysis System ----------
+
+enum TicketFileType {
+  DATA
+  DESCRIPTION
+  SAMPLE
+  RESULT
+}
+
+enum TicketMessageSender {
+  CUSTOMER
+  EXPERT
+  SYSTEM
+}
+
+model AnalysisTicket {
+  id                     String                    @id @default(cuid())
+  ticketNumber           String                    @unique
+  customerUserId         String
+  assignedExpertUserId   String?
+  categorySlug           String
+  categoryNameSnapshot   String
+  title                  String
+  brief                  String
+  status                 AnalysisTicketStatus      @default(OPEN)
+  deliveryMode           AnalysisTicketDeliveryMode @default(STANDARD)
+  quotePriceCents        Int?
+  quoteNote              String?
+  quotedAt               DateTime?
+  customerApprovedAt     DateTime?
+  revisionCount          Int                       @default(0)
+  maxRevisions           Int                       @default(2)
+  rating                 Int?
+  ratingComment          String?
+  ratedAt                DateTime?
+  deadlineAt             DateTime?
+  assignedAt             DateTime?
+  closedAt               DateTime?
+  lastActivityAt         DateTime                  @default(now())
+  metadata               Json?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  customer               User                      @relation("CreatedAnalysisTickets", fields: [customerUserId], references: [id], onDelete: Cascade)
+  assignedExpert         User?                     @relation("AssignedAnalysisTickets", fields: [assignedExpertUserId], references: [id], onDelete: SetNull)
+  files                  TicketFile[]
+  messages               TicketMessage[]
+  ndaAgreement           NdaAgreement?
+  payments               Payment[]
+
+  @@index([customerUserId])
+  @@index([assignedExpertUserId])
+  @@index([categorySlug])
+  @@index([status])
+  @@index([deadlineAt])
+  @@index([createdAt])
+  @@map("analysis_tickets")
+}
+
+/// Task 217: Files attached to a ticket (data, description, sample, result).
+model TicketFile {
+  id              String         @id @default(cuid())
+  ticketId        String
+  uploadedByUserId String
+  fileType        TicketFileType
+  storageKey      String
+  originalFileName String
+  mimeType        String
+  sizeBytes       Int
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  ticket          AnalysisTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy      User           @relation("UploadedTicketFiles", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([fileType])
+  @@index([uploadedByUserId])
+  @@map("ticket_files")
+}
+
+/// Task 218: Messages (chat) within a ticket.
+model TicketMessage {
+  id         String              @id @default(cuid())
+  ticketId   String
+  senderUserId String?
+  senderType TicketMessageSender
+  body       String
+  metadata   Json?
+  createdAt  DateTime            @default(now())
+  ticket     AnalysisTicket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender     User?               @relation("SentTicketMessages", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([senderUserId])
+  @@index([createdAt])
+  @@map("ticket_messages")
+}
+
+/// Task 219: Optional NDA — admin can require per ticket.
+model NdaAgreement {
+  id              String          @id @default(cuid())
+  ticketId        String          @unique
+  expertUserId    String
+  agreedAt        DateTime?
+  documentStorageKey String?
+  createdAt       DateTime        @default(now())
+  ticket          AnalysisTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  expert          User            @relation("NdaAgreements", fields: [expertUserId], references: [id], onDelete: Cascade)
+
+  @@index([expertUserId])
+  @@map("nda_agreements")
+}
+
+/// Task 220: Expert profiles (bio, capacity, active status).
+model ExpertProfile {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  bio             String?
+  maxConcurrent   Int           @default(3)
+  activeTickets   Int           @default(0)
+  isAvailable     Boolean       @default(true)
+  averageRating   Float?
+  totalCompleted  Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags            ExpertiseTag[]
+
+  @@map("expert_profiles")
+}
+
+/// Task 221: Tags linking experts to analysis categories.
+model ExpertiseTag {
+  id              String        @id @default(cuid())
+  expertProfileId String
+  categorySlug    String
+  createdAt       DateTime      @default(now())
+  expertProfile   ExpertProfile @relation(fields: [expertProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([expertProfileId, categorySlug])
+  @@index([categorySlug])
+  @@map("expertise_tags")
+}
+
+/// Task 222: Analysis category definitions (admin-managed).
+model AnalysisCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("analysis_categories")
+}
+
+/// Task 223: Add-on services that can be attached to tickets.
+model AnalysisAddOn {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  priceCents  Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("analysis_add_ons")
+}
+
+/// Task 241: Payment records for formatting, analysis, and subscription flows.
+model Payment {
+  id                String         @id @default(cuid())
+  userId            String
+  analysisTicketId  String?
+  documentId        String?
+  provider          PaymentProvider
+  type              PaymentType    @default(ONE_TIME)
+  status            PaymentStatus  @default(PENDING)
+  currency          String
+  amountCents       Int
+  providerPaymentId String?
+  checkoutSessionId String?
+  subscriptionId    String?
+  providerMetadata  Json?
+  fraudLevel        FraudLevel?
+  fraudReasons      Json?
+  paidAt            DateTime?
+  failedAt          DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisTicket    AnalysisTicket? @relation(fields: [analysisTicketId], references: [id], onDelete: SetNull)
+  document          Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  subscription      Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  invoice           Invoice?
+
+  @@index([userId])
+  @@index([analysisTicketId])
+  @@index([documentId])
+  @@index([provider])
+  @@index([type])
+  @@index([status])
+  @@index([subscriptionId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+/// Task 242: Subscription records for recurring billing plans.
+model Subscription {
+  id                     String               @id @default(cuid())
+  userId                 String
+  provider               PaymentProvider
+  status                 SubscriptionStatus   @default(TRIALING)
+  interval               SubscriptionInterval
+  planCode               String
+  currency               String
+  priceCents             Int
+  providerSubscriptionId String?
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean              @default(false)
+  canceledAt             DateTime?
+  metadata               Json?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments               Payment[]
+
+  @@index([userId])
+  @@index([provider])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@index([createdAt])
+  @@map("subscriptions")
+}
+
+/// Task 243: Coupon records for checkout discounts.
+model Coupon {
+  id             String             @id @default(cuid())
+  code           String             @unique
+  name           String
+  description    String?
+  discountType   CouponDiscountType
+  discountValue  Int
+  currency       String?
+  isActive       Boolean            @default(true)
+  maxRedemptions Int?
+  redeemedCount  Int                @default(0)
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("coupons")
+}
+
+/// Task 253: Invoice records generated for successful payments.
+model Invoice {
+  id              String   @id @default(cuid())
+  invoiceNumber   String   @unique
+  userId          String
+  paymentId       String   @unique
+  currency        String
+  subtotalCents   Int
+  discountCents   Int      @default(0)
+  totalCents      Int
+  customerSnapshot Json?
+  metadata        Json?
+  issuedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([issuedAt])
+  @@map("invoices")
+}
+
+/// Task 247: Idempotent log of inbound payment provider webhook events.
+model PaymentWebhookEvent {
+  id           String          @id @default(cuid())
+  provider     PaymentProvider
+  providerEventId String
+  eventType    String
+  payload      Json
+  status       PaymentWebhookEventStatus @default(RECEIVED)
+  paymentId    String?
+  subscriptionId String?
+  errorMessage String?
+  processedAt  DateTime?
+  receivedAt   DateTime        @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([provider])
+  @@index([eventType])
+  @@index([status])
+  @@index([receivedAt])
+  @@map("payment_webhook_events")
+}
+
+enum PaymentWebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum StudentVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+/// Task 249: SheerID-backed student verification per user.
+model StudentVerification {
+  id                String                    @id @default(cuid())
+  userId            String
+  provider          String                    @default("sheerid")
+  programId         String
+  verificationId    String?                   @unique
+  status            StudentVerificationStatus @default(PENDING)
+  redirectUrl       String?
+  rejectionReason   String?
+  metadata          Json?
+  verifiedAt        DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([programId])
+  @@map("student_verifications")
+}
+
+// ---------- Batch 11: Notifications + Fraud ----------
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+  WHATSAPP
+  TELEGRAM
+}
+
+enum NotificationStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+  READ
+}
+
+enum FraudLevel {
+  ALLOW
+  REVIEW
+  BLOCK
+}
+
+/// Task 254: Per-user per-channel notification record.
+model Notification {
+  id                String              @id @default(cuid())
+  userId            String
+  eventType         String
+  channel           NotificationChannel
+  status            NotificationStatus  @default(PENDING)
+  title             String
+  body              String
+  payload           Json?
+  templateKey       String?
+  providerMessageId String?
+  attemptCount      Int                 @default(0)
+  lastError         String?
+  createdAt         DateTime            @default(now())
+  sentAt            DateTime?
+  readAt            DateTime?
+  failedAt          DateTime?
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+/// Task 260: Per-event channel preferences overriding the global NotificationPreference.
+model NotificationEventPreference {
+  id               String   @id @default(cuid())
+  userId           String
+  eventType        String
+  enabledChannels  Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventType])
+  @@index([userId])
+  @@map("notification_event_preferences")
+}
+
+/// Task 264: Admin-editable key/value system settings (channel kill switches, etc).
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("system_settings")
+}
+
+// ---------- Batch 12: Admin Panel + Analytics ----------
+
+enum FeatureFlagAudience {
+  EVERYONE
+  ADMINS_ONLY
+  PERCENTAGE_ROLLOUT
+  USER_LIST
+}
+
+/// Task 272: Toggleable feature flags consulted at runtime by services and UI.
+model FeatureFlag {
+  key             String              @id
+  description     String?
+  enabled         Boolean             @default(false)
+  audience        FeatureFlagAudience @default(EVERYONE)
+  rolloutPercent  Int                 @default(0)
+  allowedUserIds  Json?
+  metadata        Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  updatedBy       String?
+
+  @@map("feature_flags")
+}
+
+enum AnnouncementSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+/// Task 288: Site-wide announcement banner content.
+model Announcement {
+  id          String                @id @default(cuid())
+  title       String
+  body        String
+  severity    AnnouncementSeverity  @default(INFO)
+  isActive    Boolean               @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  audience    String                @default("ALL")
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  createdById String?
+
+  @@index([isActive])
+  @@map("announcements")
+}
+
+enum LegalDocumentSlug {
+  TERMS
+  PRIVACY
+  KVKK
+  GDPR
+  COOKIES
+}
+
+/// Task 289: Legal text storage with versioned history.
+model LegalDocument {
+  id            String             @id @default(cuid())
+  slug          LegalDocumentSlug
+  locale        String             @default("tr")
+  title         String
+  content       String
+  version       Int                @default(1)
+  publishedAt   DateTime?
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  updatedBy     String?
+
+  @@unique([slug, locale, version])
+  @@index([slug, locale, isActive])
+  @@map("legal_documents")
+}
+
+enum AnalyticsReportType {
+  WEEKLY
+  MONTHLY
+  ON_DEMAND
+}
+
+enum AnalyticsReportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+/// Task 284: Persisted scheduled report executions for audit/history.
+model AnalyticsReport {
+  id           String                @id @default(cuid())
+  type         AnalyticsReportType
+  status       AnalyticsReportStatus @default(PENDING)
+  periodStart  DateTime
+  periodEnd    DateTime
+  metrics      Json
+  generatedAt  DateTime              @default(now())
+  emailedTo    Json?
+  errorMessage String?
+
+  @@index([type])
+  @@index([generatedAt])
+  @@map("analytics_reports")
+}
+
+// ---------- Batch 13: Support + Affiliate ----------
+
+enum SupportTicketStatus {
+  OPEN
+  AWAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+  TELEGRAM
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportMessageSender {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+/// Task 309: Customer support tickets (distinct from AnalysisTicket which
+/// is a paid academic-analysis job). Uses its own table so status, channel,
+/// and SLAs can diverge from the analysis flow.
+model SupportTicket {
+  id         String                @id @default(cuid())
+  userId     String
+  subject    String
+  status     SupportTicketStatus   @default(OPEN)
+  channel    SupportTicketChannel  @default(IN_APP)
+  priority   SupportTicketPriority @default(NORMAL)
+  closedAt   DateTime?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  user       User                  @relation("SupportTicketsCreated", fields: [userId], references: [id], onDelete: Cascade)
+  messages   SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id           String                @id @default(cuid())
+  ticketId     String
+  senderUserId String?
+  senderRole   SupportMessageSender
+  body         String
+  createdAt    DateTime              @default(now())
+  ticket       SupportTicket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender       User?                 @relation("SupportMessagesSent", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("support_messages")
+}
+
+enum AffiliateStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum AffiliateRewardStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+/// Task 316: Affiliate program enrollment.
+model Affiliate {
+  id               String            @id @default(cuid())
+  userId           String            @unique
+  code             String            @unique
+  status           AffiliateStatus   @default(ACTIVE)
+  commissionPercent Int              @default(10)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals        Referral[]
+  rewards          AffiliateReward[]
+
+  @@map("affiliates")
+}
+
+/// Task 317: Individual referral events (link click / signup).
+model Referral {
+  id              String    @id @default(cuid())
+  affiliateId     String
+  referredUserId  String?   @unique
+  ipHash          String?
+  landingUrl      String?
+  convertedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  affiliate       Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([ipHash])
+  @@map("referrals")
+}
+
+/// Task 318: Commission earned by the affiliate on a referral conversion.
+model AffiliateReward {
+  id          String                @id @default(cuid())
+  affiliateId String
+  referralId  String?
+  paymentId   String?
+  amountCents Int
+  currency    String
+  status      AffiliateRewardStatus @default(PENDING)
+  approvedAt  DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  affiliate   Affiliate             @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([status])
+  @@map("affiliate_rewards")
+}

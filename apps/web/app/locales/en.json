@@ -1,0 +1,51 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "error": "An error occurred",
+    "success": "Success"
+  },
+  "nav": {
+    "login": "Log In",
+    "register": "Sign Up",
+    "dashboard": "Dashboard",
+    "features": "Features",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "templates": "Templates"
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "cookies": "Cookies"
+  },
+  "home": {
+    "hero_eyebrow": "THE FUTURE OF ACADEMIC STANDARDS",
+    "hero_title": "Formatting Your Thesis Has Never Been Easier",
+    "hero_copy": "Don't spend hours on university templates with FormatEdit. Generate 100% compliant formatting in seconds with AI-integrated APA and IEEE automatic styling.",
+    "cta_primary": "Start for Free Now",
+    "cta_secondary": "How it Works?",
+    "features_title": "Accelerate Your Academic Journey",
+    "feature_1_title": "Autonomous Formatting",
+    "feature_1_desc": "Margins, indents, indexes, and heading hierarchies are adapted to your template with a single click using AI.",
+    "feature_2_title": "Live Preview",
+    "feature_2_desc": "See your edits instantly. Watch how your formatting dynamically reacts in real-time split-view mode.",
+    "feature_3_title": "Advanced Citations",
+    "feature_3_desc": "Your references are instantly transformed into APA, Chicago, Vancouver, and integrated securely with in-text citations."
+  },
+  "auth": {
+    "login_title": "Log Into Your Account",
+    "login_subtitle": "Continue managing your academic documents.",
+    "register_title": "Create a New Account",
+    "register_subtitle": "Join the FormatEdit ecosystem.",
+    "email": "Email Address",
+    "password": "Password",
+    "login_btn": "Log In",
+    "register_btn": "Sign Up",
+    "forgot_pass": "Forgot Password?",
+    "no_account": "Don't have an account? Sign up",
+    "has_account": "Already have an account? Log in"
+  }
+}

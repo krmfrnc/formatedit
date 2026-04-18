@@ -1,0 +1,50 @@
+{
+  "name": "formatedit",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.1",
+  "scripts": {
+    "dev": "npx pnpm -r --parallel dev",
+    "build": "npx pnpm -r build",
+    "lint": "npx pnpm -r lint",
+    "typecheck": "npx pnpm -r typecheck",
+    "test": "npx pnpm -r test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "node scripts/prepare-husky.mjs",
+    "prisma:generate": "npx prisma generate",
+    "prisma:validate": "npx prisma validate",
+    "prisma:seed": "npx prisma db seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "@next/eslint-plugin-next": "^15.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "eslint-config-next": "^15.3.1",
+    "eslint-config-prettier": "^10.1.2",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.5.3",
+    "prisma": "^6.6.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1",
+    "@prisma/client": "^6.19.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "@sentry-internal/node-cpu-profiler",
+      "@sentry/cli",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+}

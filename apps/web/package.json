@@ -1,0 +1,47 @@
+{
+  "name": "@formatedit/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "storybook": "CI=1 storybook dev -p 6006",
+    "build-storybook": "CI=1 storybook build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "next build",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "test:cov": "vitest run --coverage --passWithNoTests",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@formatedit/shared": "workspace:*",
+    "@sentry/nextjs": "^9.16.0",
+    "@tiptap/extension-placeholder": "^3.22.3",
+    "@tiptap/react": "^3.22.3",
+    "@tiptap/starter-kit": "^3.22.3",
+    "next": "^15.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "socket.io-client": "^4.8.3",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@storybook/addon-a11y": "9.1.20",
+    "@storybook/nextjs-vite": "9.1.20",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.14.1",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "jsdom": "^29.0.2",
+    "storybook": "9.1.20",
+    "typescript": "^5.8.3",
+    "vite": "7.1.12",
+    "vitest": "^4.1.4"
+  }
+}
