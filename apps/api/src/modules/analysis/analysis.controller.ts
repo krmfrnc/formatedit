@@ -33,6 +33,14 @@ import { AnalysisService } from './analysis.service';
 export class AnalysisController {
   constructor(private readonly analysisService: AnalysisService) {}
 
+  // ───────── Public catalog ─────────
+
+  @Get('analysis-categories')
+  @UseGuards(JwtAuthGuard)
+  listCategories() {
+    return this.analysisService.listActiveCategories();
+  }
+
   // ───────── Ticket CRUD ─────────
 
   @Post('analysis/tickets')

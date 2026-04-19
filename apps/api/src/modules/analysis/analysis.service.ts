@@ -42,6 +42,15 @@ export class AnalysisService {
     return categories.map((category) => this.toAnalysisCategoryRecord(category));
   }
 
+  async listActiveCategories(): Promise<AnalysisCategoryRecord[]> {
+    const categories = await this.prismaService.analysisCategory.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+
+    return categories.map((category) => this.toAnalysisCategoryRecord(category));
+  }
+
   async adminCreateCategory(
     actorUserId: string,
     input: AnalysisCategoryUpsertInput,
