@@ -1,3 +1,5 @@
+import { useAuth } from '../../_lib/auth';
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface AnnouncementRow {
@@ -12,9 +14,10 @@ interface AnnouncementRow {
 
 async function listAnnouncements(): Promise<{ items: AnnouncementRow[]; reachable: boolean }> {
   try {
+    const { token } = await useAuth();
     const res = await fetch(`${apiUrl}/admin/announcements`, {
       cache: 'no-store',
-      headers: { authorization: 'Bearer admin-preview-token' },
+      headers: token ? { authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) return { items: [], reachable: false };
     return { items: (await res.json()) as AnnouncementRow[], reachable: true };

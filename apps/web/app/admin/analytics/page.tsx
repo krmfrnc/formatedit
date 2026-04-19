@@ -1,11 +1,14 @@
+import { useAuth } from '../../_lib/auth';
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 /** Task 278-282: Full analytics view — mirrors the dashboard snapshot with extra detail. */
 export default async function AnalyticsPage() {
   try {
+    const { token } = await useAuth();
     const res = await fetch(`${apiUrl}/admin/analytics/snapshot`, {
       cache: 'no-store',
-      headers: { authorization: 'Bearer admin-preview-token' },
+      headers: token ? { authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) throw new Error('unavailable');
     const snapshot = (await res.json()) as Record<string, unknown>;

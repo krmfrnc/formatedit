@@ -4,7 +4,9 @@
     "save": "Kaydet",
     "cancel": "İptal",
     "error": "Bir hata oluştu",
-    "success": "Başarılı"
+    "success": "Başarılı",
+    "retry": "Tekrar Dene",
+    "close": "Kapat"
   },
   "nav": {
     "login": "Giriş Yap",
@@ -13,7 +15,10 @@
     "features": "Özellikler",
     "pricing": "Fiyatlandırma",
     "contact": "İletişim",
-    "templates": "Şablonlar"
+    "templates": "Şablonlar",
+    "account": "Hesabım",
+    "logout": "Çıkış Yap",
+    "upload": "Belge Yükle"
   },
   "footer": {
     "rights": "Tüm hakları saklıdır.",
@@ -33,7 +38,11 @@
     "feature_2_title": "Canlı Önizleme",
     "feature_2_desc": "Düzenlemelerinizi anında görün. Split-view moduyla formatınızın nasıl tepki verdiğini canlı canlı inceleyin.",
     "feature_3_title": "Gelişmiş Kaynakça",
-    "feature_3_desc": "Referanslarınız APA, Chicago, Vancouver gibi dilediğiniz stile anında dönüştürülüp metin içine entegre edilir."
+    "feature_3_desc": "Referanslarınız APA, Chicago, Vancouver gibi dilediğiniz stile anında dönüştürülüp metin içine entegre edilir.",
+    "dev_shortcuts": "Geliştirici Kısayolları",
+    "shortcut_audit": "Audit",
+    "shortcut_workspace": "Çalışma Alanı",
+    "shortcut_editor_lab": "Editör Laboratuvarı"
   },
   "auth": {
     "login_title": "Hesabınıza Giriş Yapın",
@@ -42,10 +51,30 @@
     "register_subtitle": "FormatEdit dünyasına katılın.",
     "email": "E-posta Adresi",
     "password": "Şifre",
+    "full_name": "Ad Soyad",
+    "full_name_placeholder": "Dr. Akademisyen",
     "login_btn": "Giriş",
     "register_btn": "Kayıt Ol",
     "forgot_pass": "Şifremi Unuttum",
     "no_account": "Hesabınız yok mu? Kayıt olun",
     "has_account": "Zaten hesabınız var mı? Giriş yapın"
+  },
+  "upload": {
+    "eyebrow": "BELGE YÜKLEME",
+    "title": "Belgenizi Yükleyin",
+    "subtitle": "Word, PDF veya metin dosyanızı yükleyin; biz devreye girelim.",
+    "dropzone_title": "Belgeyi sürükleyip bırakın veya tıklayıp seçin",
+    "dropzone_hint": "Desteklenen biçimler: DOCX, DOC, PDF, TXT, RTF, ODT",
+    "uploading": "Yükleniyor",
+    "submit": "Yüklemeyi Başlat",
+    "reset": "Sıfırla",
+    "success": "Belge başarıyla yüklendi.",
+    "error_generic": "Yükleme sırasında bir hata oluştu.",
+    "error_network": "Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.",
+    "error_unauthorized": "Oturum süreniz dolmuş. Lütfen tekrar giriş yapın."
+  },
+  "admin": {
+    "data_unavailable_title": "Analitik Verisi Alınamadı",
+    "data_unavailable_body": "Veriler API'den alınamadı. Servis durumunu kontrol edin."
   }
 }

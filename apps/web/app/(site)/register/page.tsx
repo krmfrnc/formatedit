@@ -1,16 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslation } from '../_lib/i18n/useTranslation';
-import { Navbar } from '../_components/Navbar';
-import { Footer } from '../_components/Footer';
+import { useTranslation } from '../../_lib/i18n/useTranslation';
 
 export default function RegisterPage() {
   const { t } = useTranslation();
 
   return (
     <>
-      <Navbar />
       <main className="auth-shell">
         <div className="auth-card glass-panel" style={{ marginTop: '4rem' }}>
           <div style={{ textAlign: 'center' }}>
@@ -20,8 +17,8 @@ export default function RegisterPage() {
 
           <form className="security-form" onSubmit={(e) => e.preventDefault()}>
             <label>
-              <span>Ad Soyad</span>
-              <input type="text" placeholder="Dr. Akademisyen" required />
+              <span>{t('auth.full_name')}</span>
+              <input type="text" placeholder={t('auth.full_name_placeholder')} required />
             </label>
 
             <label>
@@ -46,7 +43,6 @@ export default function RegisterPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

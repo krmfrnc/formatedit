@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, Param, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import type { CookieOptions, Request, Response } from 'express';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
@@ -17,6 +17,52 @@ import { VerifyTwoFactorDto } from './dto/verify-two-factor.dto';
 import { GoogleOAuthGuard } from './google-oauth.guard';
 import { TwoFactorService } from './two-factor.service';
 
+const REFRESH_COOKIE = 'refresh-token';
+const ACCESS_COOKIE = 'auth-token';
+
+function refreshCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}
+
+function accessCookieOptions(): CookieOptions {
+  return {
+    httpOnly: false,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 15 * 60 * 1000,
+  };
+}
+
+function readRefreshCookie(req: Request): string | undefined {
+  const raw = req.headers.cookie;
+  if (!raw) return undefined;
+  for (const part of raw.split(';')) {
+    const [name, ...rest] = part.trim().split('=');
+    if (name === REFRESH_COOKIE) return decodeURIComponent(rest.join('='));
+  }
+  return undefined;
+}
+
+function applySessionCookies(
+  res: Response,
+  session: { accessToken: string; refreshToken: string },
+): void {
+  res.cookie(REFRESH_COOKIE, session.refreshToken, refreshCookieOptions());
+  res.cookie(ACCESS_COOKIE, session.accessToken, accessCookieOptions());
+}
+
+function clearSessionCookies(res: Response): void {
+  res.clearCookie(REFRESH_COOKIE, { ...refreshCookieOptions(), maxAge: undefined });
+  res.clearCookie(ACCESS_COOKIE, { ...accessCookieOptions(), maxAge: undefined });
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -30,18 +76,37 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const session = await this.authService.login(dto);
+    applySessionCookies(res, session);
+    return session;
   }
 
   @Post('refresh')
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refreshSession(dto);
+  async refresh(
+    @Body() dto: Partial<RefreshTokenDto>,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = dto?.refreshToken ?? readRefreshCookie(req);
+    if (!refreshToken) {
+      throw new UnauthorizedException('Missing refresh token');
+    }
+    const session = await this.authService.refreshSession({ refreshToken });
+    applySessionCookies(res, session);
+    return session;
   }
 
   @Post('logout')
-  logout(@Body() dto: RefreshTokenDto) {
-    return this.authService.logout(dto);
+  async logout(
+    @Body() dto: Partial<RefreshTokenDto>,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = dto?.refreshToken ?? readRefreshCookie(req);
+    clearSessionCookies(res);
+    if (!refreshToken) return { success: true as const };
+    return this.authService.logout({ refreshToken });
   }
 
   @Get('me')

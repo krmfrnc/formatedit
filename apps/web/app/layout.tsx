@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { CookieConsentBanner } from './_components/cookie-consent-banner';
 import { LanguageProvider } from './_lib/i18n/LanguageContext';
+import { AuthProvider } from './_lib/AuthContext';
 
 export const metadata: Metadata = {
   title: 'FormatEdit',
@@ -36,10 +37,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body style={{ fontFamily: "'Inter', sans-serif" }}>
-        <LanguageProvider>
-          {children}
-          <CookieConsentBanner />
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            {children}
+            <CookieConsentBanner />
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

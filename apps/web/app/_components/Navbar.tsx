@@ -3,10 +3,18 @@
 import Link from 'next/link';
 import { useTranslation } from '../_lib/i18n/useTranslation';
 import { useLanguage } from '../_lib/i18n/LanguageContext';
+import { useAuth } from '../_lib/auth-client';
 
 export function Navbar() {
   const { t, language } = useTranslation();
   const { setLanguage } = useLanguage();
+
+  let isAuthenticated = false;
+  try {
+    ({ isAuthenticated } = useAuth());
+  } catch {
+    isAuthenticated = false;
+  }
 
   return (
     <nav className="nav-bar glass-panel">
@@ -16,14 +24,14 @@ export function Navbar() {
         </Link>
         <div className="nav-links">
           <Link href="/templates/workspace">{t('nav.templates')}</Link>
-          <Link href="/admin">{t('nav.dashboard')}</Link>
+          {isAuthenticated ? <Link href="/admin">{t('nav.dashboard')}</Link> : null}
         </div>
       </div>
-      
+
       <div className="nav-links" style={{ gap: '1rem' }}>
         <div className="lang-switch">
-          <select 
-            value={language} 
+          <select
+            value={language}
             onChange={(e) => setLanguage(e.target.value)}
             aria-label="Dil Seçimi"
           >
@@ -31,12 +39,20 @@ export function Navbar() {
             <option value="en">ENGLISH</option>
           </select>
         </div>
-        <Link href="/login" className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>
-          {t('nav.login')}
-        </Link>
-        <Link href="/register" className="btn-primary" style={{ padding: '0.5rem 1rem' }}>
-          {t('nav.register')}
-        </Link>
+        {isAuthenticated ? (
+          <Link href="/account" className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>
+            {t('nav.account')}
+          </Link>
+        ) : (
+          <>
+            <Link href="/login" className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>
+              {t('nav.login')}
+            </Link>
+            <Link href="/register" className="btn-primary" style={{ padding: '0.5rem 1rem' }}>
+              {t('nav.register')}
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );

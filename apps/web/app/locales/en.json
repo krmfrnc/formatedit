@@ -4,7 +4,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "error": "An error occurred",
-    "success": "Success"
+    "success": "Success",
+    "retry": "Retry",
+    "close": "Close"
   },
   "nav": {
     "login": "Log In",
@@ -13,7 +15,10 @@
     "features": "Features",
     "pricing": "Pricing",
     "contact": "Contact",
-    "templates": "Templates"
+    "templates": "Templates",
+    "account": "My Account",
+    "logout": "Log Out",
+    "upload": "Upload Document"
   },
   "footer": {
     "rights": "All rights reserved.",
@@ -33,7 +38,11 @@
     "feature_2_title": "Live Preview",
     "feature_2_desc": "See your edits instantly. Watch how your formatting dynamically reacts in real-time split-view mode.",
     "feature_3_title": "Advanced Citations",
-    "feature_3_desc": "Your references are instantly transformed into APA, Chicago, Vancouver, and integrated securely with in-text citations."
+    "feature_3_desc": "Your references are instantly transformed into APA, Chicago, Vancouver, and integrated securely with in-text citations.",
+    "dev_shortcuts": "Development Shortcuts",
+    "shortcut_audit": "Audit",
+    "shortcut_workspace": "Workspace",
+    "shortcut_editor_lab": "Editor Lab"
   },
   "auth": {
     "login_title": "Log Into Your Account",
@@ -42,10 +51,30 @@
     "register_subtitle": "Join the FormatEdit ecosystem.",
     "email": "Email Address",
     "password": "Password",
+    "full_name": "Full Name",
+    "full_name_placeholder": "Dr. Academic",
     "login_btn": "Log In",
     "register_btn": "Sign Up",
     "forgot_pass": "Forgot Password?",
     "no_account": "Don't have an account? Sign up",
     "has_account": "Already have an account? Log in"
+  },
+  "upload": {
+    "eyebrow": "DOCUMENT UPLOAD",
+    "title": "Upload Your Document",
+    "subtitle": "Drop your Word, PDF, or text file — we'll take it from there.",
+    "dropzone_title": "Drag and drop your document, or click to browse",
+    "dropzone_hint": "Supported formats: DOCX, DOC, PDF, TXT, RTF, ODT",
+    "uploading": "Uploading",
+    "submit": "Start Upload",
+    "reset": "Reset",
+    "success": "Document uploaded successfully.",
+    "error_generic": "Something went wrong during upload.",
+    "error_network": "Connection error. Please check your internet connection.",
+    "error_unauthorized": "Your session has expired. Please sign in again."
+  },
+  "admin": {
+    "data_unavailable_title": "Analytics Data Unavailable",
+    "data_unavailable_body": "Data could not be retrieved from the API. Check service status."
   }
 }

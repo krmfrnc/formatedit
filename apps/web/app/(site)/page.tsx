@@ -1,16 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Navbar } from './_components/Navbar';
-import { Footer } from './_components/Footer';
-import { useTranslation } from './_lib/i18n/useTranslation';
+import { useTranslation } from '../_lib/i18n/useTranslation';
 
 export default function HomePage() {
   const { t } = useTranslation();
 
   return (
     <>
-      <Navbar />
       <main className="auth-shell" style={{ paddingTop: '80px' }}>
         <section className="hero glass-panel" style={{ textAlign: 'center', maxWidth: '800px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', marginBottom: '4rem' }}>
           <p className="eyebrow" style={{ marginTop: '0' }}>{t('home.hero_eyebrow')}</p>
@@ -53,15 +50,14 @@ export default function HomePage() {
         
         {/* Development Shortcuts (Temporary link list from old index) */}
         <div style={{ marginTop: '5rem', padding: '1rem', borderTop: '1px solid var(--border)', width: '100%', maxWidth: '1000px', textAlign: 'center' }}>
-          <p className="eyebrow">Development Shortcuts</p>
+          <p className="eyebrow">{t('home.dev_shortcuts')}</p>
           <div className="panel-actions" style={{ justifyContent: 'center' }}>
-            <Link href="/admin/audit-logs">Audit</Link>
-            <Link href="/templates/workspace">Workspace</Link>
-            <Link href="/editor-lab">Editor Lab</Link>
+            <Link href="/admin/audit-logs">{t('home.shortcut_audit')}</Link>
+            <Link href="/templates/workspace">{t('home.shortcut_workspace')}</Link>
+            <Link href="/editor-lab">{t('home.shortcut_editor_lab')}</Link>
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

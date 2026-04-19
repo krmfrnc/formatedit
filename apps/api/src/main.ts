@@ -26,6 +26,7 @@ async function bootstrap(): Promise<void> {
   const configService = app.get(ConfigService);
   app.enableCors({
     origin: [configService.get<string>('appUrl', 'http://localhost:3000')],
+    credentials: true,
   });
   initializeSentry(configService.get<string>('sentryDsn', ''));
 

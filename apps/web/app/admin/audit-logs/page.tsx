@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { AuditLogRecord, AuditRetentionPolicy } from '@formatedit/shared';
+import { useAuth } from '../../_lib/auth';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -9,18 +10,16 @@ async function getAuditSnapshot(): Promise<{
   reachable: boolean;
 }> {
   try {
+    const { token } = await useAuth();
+    const authHeader = token ? { authorization: `Bearer ${token}` } : {};
     const [logsResponse, retentionResponse] = await Promise.all([
       fetch(`${apiUrl}/admin/audit-logs?limit=10`, {
         cache: 'no-store',
-        headers: {
-          authorization: 'Bearer admin-preview-token',
-        },
+        headers: authHeader,
       }),
       fetch(`${apiUrl}/admin/audit-logs/retention`, {
         cache: 'no-store',
-        headers: {
-          authorization: 'Bearer admin-preview-token',
-        },
+        headers: authHeader,
       }),
     ]);
 
