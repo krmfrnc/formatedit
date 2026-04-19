@@ -16,6 +16,9 @@ describe('FormattingWorkerService', () => {
         templateId: string;
         requestedBy: string;
       };
+      attemptsMade: number;
+      id: string;
+      updateProgress: (value: number) => Promise<void>;
     }) => Promise<void> = () => Promise.resolve(undefined);
 
     const mockQueueService = {
@@ -32,21 +35,24 @@ describe('FormattingWorkerService', () => {
         success: true,
         errors: [],
         warnings: [],
+        infos: [],
         formattedBlocks: [
           {
             orderIndex: 0,
             blockType: 'HEADING',
             appliedRules: ['PAGE_LAYOUT', 'TYPOGRAPHY', 'HEADING_STYLE'],
             text: 'Abstract',
-            metadata: { level: 1 },
+            metadata: { heading: { level: 1 } },
           },
           {
             orderIndex: 1,
             blockType: 'PARAGRAPH',
             appliedRules: ['PAGE_LAYOUT', 'TYPOGRAPHY'],
             text: 'Body text for the document.',
+            metadata: {},
           },
         ],
+        generatedPages: [],
         documentId: 'document_1',
         documentVersionId: 'version_1',
         durationMs: 12,
@@ -111,7 +117,7 @@ describe('FormattingWorkerService', () => {
         {
           provide: PdfOutputGeneratorService,
           useValue: {
-            generatePdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 test')),
+            generatePdf: jest.fn().mockReturnValue(Buffer.from('%PDF-1.4 test')),
           },
         },
       ],
@@ -127,6 +133,9 @@ describe('FormattingWorkerService', () => {
         templateId: 'template_1',
         requestedBy: 'user_1',
       },
+      attemptsMade: 0,
+      id: 'job_1',
+      updateProgress: jest.fn().mockResolvedValue(undefined),
     });
 
     expect(mockFormattingService.applyFormatting).toHaveBeenCalledWith(
@@ -135,6 +144,7 @@ describe('FormattingWorkerService', () => {
       {
         typography: { fontFamily: 'Times New Roman', fontSizePt: 12 },
       },
+      {},
     );
     expect(mockStorage.uploadObject).toHaveBeenCalledTimes(2);
     const createArgs = documentVersionCreateMock.mock.calls[0]?.[0];
@@ -157,12 +167,14 @@ describe('PdfOutputGeneratorService', () => {
           blockType: 'HEADING',
           appliedRules: [],
           text: 'Abstract',
+          metadata: {},
         },
         {
           orderIndex: 1,
           blockType: 'PARAGRAPH',
           appliedRules: [],
           text: 'This is a sample paragraph for the PDF output generator.',
+          metadata: {},
         },
       ],
       {

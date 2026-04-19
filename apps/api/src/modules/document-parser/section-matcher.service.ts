@@ -5,6 +5,7 @@ import type { SemanticSectionType } from '../document-parser/document-parser.typ
 const sectionTypeToSlotMap: Record<SemanticSectionType, string[]> = {
   ABSTRACT: ['abstract', 'ozet', 'summary'],
   INTRODUCTION: ['introduction', 'giris', 'giriş'],
+  LITERATURE_REVIEW: ['literature_review', 'literatur', 'literatür'],
   METHODS: [
     'methods',
     'methodology',
@@ -17,6 +18,13 @@ const sectionTypeToSlotMap: Record<SemanticSectionType, string[]> = {
   CONCLUSION: ['conclusion', 'sonuc', 'sonuç', 'conclusions'],
   REFERENCES: ['references', 'kaynakca', 'kaynakça', 'bibliography'],
   APPENDIX: ['appendix', 'ekler', 'ek', 'annex', 'appendices'],
+  ACKNOWLEDGMENT: ['acknowledgment', 'acknowledgements', 'teşekkür', 'önsöz'],
+  ABBREVIATIONS: ['abbreviations', 'kısaltmalar', 'simgeler'],
+  TABLE_OF_CONTENTS: ['table_of_contents', 'içindekiler'],
+  TABLE_LIST: ['table_list', 'tablolar_listesi'],
+  FIGURE_LIST: ['figure_list', 'şekiller_listesi'],
+  CV: ['cv', 'curriculum_vitae', 'özgeçmiş'],
+  DECLARATION: ['declaration', 'beyanname', 'etik_beyan'],
   BODY: [],
 };
 

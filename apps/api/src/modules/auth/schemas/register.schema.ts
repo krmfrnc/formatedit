@@ -1,8 +1,8 @@
-import { z } from 'zod';
+wimport { z } from 'zod';
 import { academicTitles } from '../dto/register.dto';
 
 export const registerSchema = z.object({
-  email: z.email().transform((value) => value.trim().toLowerCase()),
+  email: z.string().email().transform((value) => value.trim().toLowerCase()),
   password: z.string().min(8).max(128),
   academicTitle: z.enum(academicTitles),
 });

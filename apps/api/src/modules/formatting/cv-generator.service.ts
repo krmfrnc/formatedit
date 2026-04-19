@@ -1,118 +1,66 @@
 import { Injectable } from '@nestjs/common';
 import type { FormattedBlock } from './formatting.types';
 
-export interface EducationEntry {
-  degree: string;
-  institution: string;
-  year: string;
-}
-
-export interface CVMetadata {
-  name: string;
-  birthDate: string;
-  education: EducationEntry[];
+export interface CVInput {
+  text?: string;
+  format?: 'freeText' | 'yok';
 }
 
 @Injectable()
 export class CVGeneratorService {
-  generateCV(metadata: CVMetadata): FormattedBlock[] {
+  /**
+   * Generate CV/biography page. Supports free-text and YÖK format.
+   */
+  generateCV(
+    input: CVInput,
+    fontFamily: string,
+    fontSizePt: number,
+  ): FormattedBlock[] {
     const blocks: FormattedBlock[] = [];
 
-    blocks.push({
-      orderIndex: 0,
-      blockType: 'HEADING',
-      appliedRules: ['PAGE_LAYOUT', 'HEADING_STYLE'],
-      text: 'OZGECMIS',
-      metadata: {
-        level: 1,
-        fontFamily: 'Times New Roman',
-        fontSizePt: 16,
-        isBold: true,
-        isItalic: false,
-        alignment: 'center',
-        spacingBeforePt: 0,
-        spacingAfterPt: 24,
+    // Title
+    blocks.push(this.buildBlock(blocks.length, 'HEADING', 'ÖZGEÇMİŞ', {
+      typography: {
+        fontFamily, fontSizePt: fontSizePt + 4, isBold: true,
+        alignment: 'center', lineSpacing: 1.5,
+        spacingBeforePt: 0, spacingAfterPt: 24, firstLineIndentCm: 0,
       },
-    });
+      heading: { level: 1, numberingPattern: null, isInline: false, startsNewPage: true },
+      templateSlot: 'CV',
+    }));
 
-    blocks.push({
-      orderIndex: 1,
-      blockType: 'HEADING',
-      appliedRules: ['PAGE_LAYOUT', 'HEADING_STYLE'],
-      text: metadata.name,
-      metadata: {
-        level: 2,
-        fontFamily: 'Times New Roman',
-        fontSizePt: 14,
-        isBold: true,
-        isItalic: false,
-        alignment: 'left',
-        spacingBeforePt: 10,
-        spacingAfterPt: 6,
-      },
-    });
+    if (input.text) {
+      // Split text by paragraphs
+      const paragraphs = input.text.split(/\n{2,}/).filter(Boolean);
 
-    blocks.push({
-      orderIndex: 2,
-      blockType: 'PARAGRAPH',
-      appliedRules: ['PAGE_LAYOUT', 'TYPOGRAPHY'],
-      text: `Date of Birth: ${metadata.birthDate}`,
-      metadata: {
-        fontFamily: 'Times New Roman',
-        fontSizePt: 12,
-        alignment: 'left',
-        lineSpacing: 1.5,
-      },
-    });
-
-    blocks.push({
-      orderIndex: 3,
-      blockType: 'HEADING',
-      appliedRules: ['PAGE_LAYOUT', 'HEADING_STYLE'],
-      text: 'Education',
-      metadata: {
-        level: 2,
-        fontFamily: 'Times New Roman',
-        fontSizePt: 14,
-        isBold: true,
-        isItalic: false,
-        alignment: 'left',
-        spacingBeforePt: 10,
-        spacingAfterPt: 6,
-      },
-    });
-
-    metadata.education.forEach((edu, index) => {
-      blocks.push({
-        orderIndex: 4 + index * 2,
-        blockType: 'PARAGRAPH',
-        appliedRules: ['PAGE_LAYOUT', 'TYPOGRAPHY'],
-        text: `${edu.degree} - ${edu.institution}`,
-        metadata: {
-          fontFamily: 'Times New Roman',
-          fontSizePt: 12,
-          isBold: true,
-          alignment: 'left',
-          lineSpacing: 1.5,
-          firstLineIndentCm: 1.25,
-        },
-      });
-
-      blocks.push({
-        orderIndex: 5 + index * 2,
-        blockType: 'PARAGRAPH',
-        appliedRules: ['PAGE_LAYOUT', 'TYPOGRAPHY'],
-        text: `${edu.year}`,
-        metadata: {
-          fontFamily: 'Times New Roman',
-          fontSizePt: 12,
-          alignment: 'left',
-          lineSpacing: 1.5,
-          firstLineIndentCm: 1.25,
-        },
-      });
-    });
+      for (const paragraph of paragraphs) {
+        blocks.push(this.buildBlock(blocks.length, 'PARAGRAPH', paragraph.trim(), {
+          typography: {
+            fontFamily, fontSizePt, isBold: false,
+            alignment: 'justify', lineSpacing: 1.5,
+            spacingBeforePt: 0, spacingAfterPt: 6,
+            firstLineIndentCm: 1.25,
+          },
+          templateSlot: 'CV',
+        }));
+      }
+    }
 
     return blocks;
+  }
+
+  private buildBlock(
+    orderIndex: number,
+    blockType: string,
+    text: string,
+    metadata: Record<string, unknown>,
+  ): FormattedBlock {
+    return {
+      orderIndex,
+      blockType,
+      appliedRules: ['PAGE_LAYOUT', 'FIXED_PAGE'],
+      text,
+      metadata: metadata as FormattedBlock['metadata'],
+    };
   }
 }

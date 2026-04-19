@@ -30,6 +30,14 @@ export type CitationStyleSlug =
   | 'ama'
   | 'nlm';
 
+export interface CitationInfo {
+  raw: string;
+  style: CitationStyleSlug | 'unknown';
+  authors?: string[];
+  year?: string;
+  page?: string;
+}
+
 export interface AppConfigShape {
   nodeEnv: AppEnvironment;
   appUrl: string;
@@ -542,16 +550,24 @@ export interface DocumentUploadSessionSummary {
 
 export interface ParsedDocumentBlock {
   orderIndex: number;
-  blockType: 'HEADING' | 'PARAGRAPH' | 'TABLE' | 'FIGURE' | 'EQUATION' | 'FOOTNOTE' | 'CITATION';
+  blockType: 'HEADING' | 'PARAGRAPH' | 'TABLE' | 'FIGURE' | 'EQUATION' | 'FOOTNOTE' | 'CITATION' | 'TABLE_CAPTION' | 'FIGURE_CAPTION';
   semanticSectionType:
     | 'ABSTRACT'
     | 'INTRODUCTION'
+    | 'LITERATURE_REVIEW'
     | 'METHODS'
     | 'RESULTS'
     | 'DISCUSSION'
     | 'CONCLUSION'
     | 'REFERENCES'
     | 'APPENDIX'
+    | 'ACKNOWLEDGMENT'
+    | 'ABBREVIATIONS'
+    | 'TABLE_OF_CONTENTS'
+    | 'TABLE_LIST'
+    | 'FIGURE_LIST'
+    | 'CV'
+    | 'DECLARATION'
     | 'BODY';
   title: string | null;
   text: string;
@@ -566,6 +582,8 @@ export interface ParsedDocumentBlock {
   templateSlot: string | null;
   numberingOverride: EditorBlockNumberingOverride | null;
   manualSequenceNumber: number | null;
+  citations?: CitationInfo[];
+  id?: string;
 }
 
 export type EditorBlockNumberingMode = 'INHERIT' | 'RENUMBER' | 'REMOVE' | 'CUSTOM';
@@ -619,6 +637,7 @@ export interface ParsedDocumentSummary {
   lowConfidence: boolean;
   aiAssisted: boolean;
   parseSource: 'docx' | 'pdf-conversion';
+  citationStyle?: 'APA' | 'IEEE' | 'Vancouver' | 'Chicago' | 'unknown' | null;
 }
 
 export interface ParsedDocumentResult {
@@ -672,18 +691,18 @@ export interface ParsedDocumentDiagnostics {
   documentId: string;
   documentVersionId: string;
   blockTypeCounts: Record<
-    'HEADING' | 'PARAGRAPH' | 'TABLE' | 'FIGURE' | 'EQUATION' | 'FOOTNOTE' | 'CITATION',
+    'HEADING' | 'PARAGRAPH' | 'TABLE' | 'FIGURE' | 'EQUATION' | 'FOOTNOTE' | 'CITATION' | 'TABLE_CAPTION' | 'FIGURE_CAPTION',
     number
   >;
   semanticSectionCounts: Record<
-    'ABSTRACT' | 'INTRODUCTION' | 'METHODS' | 'RESULTS' | 'DISCUSSION' | 'CONCLUSION' | 'REFERENCES' | 'APPENDIX' | 'BODY',
+    'ABSTRACT' | 'INTRODUCTION' | 'LITERATURE_REVIEW' | 'METHODS' | 'RESULTS' | 'DISCUSSION' | 'CONCLUSION' | 'REFERENCES' | 'APPENDIX' | 'ACKNOWLEDGMENT' | 'ABBREVIATIONS' | 'TABLE_OF_CONTENTS' | 'TABLE_LIST' | 'FIGURE_LIST' | 'CV' | 'DECLARATION' | 'BODY',
     number
   >;
   templateSlots: string[];
   lowConfidenceBlocks: Array<{
     orderIndex: number;
     title: string | null;
-    blockType: 'HEADING' | 'PARAGRAPH' | 'TABLE' | 'FIGURE' | 'EQUATION' | 'FOOTNOTE' | 'CITATION';
+    blockType: 'HEADING' | 'PARAGRAPH' | 'TABLE' | 'FIGURE' | 'EQUATION' | 'FOOTNOTE' | 'CITATION' | 'TABLE_CAPTION' | 'FIGURE_CAPTION';
     confidenceScore: number;
   }>;
   parseSource: 'docx' | 'pdf-conversion';

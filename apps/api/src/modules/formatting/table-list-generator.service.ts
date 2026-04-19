@@ -1,50 +1,68 @@
 import { Injectable } from '@nestjs/common';
 import type { FormattedBlock } from './formatting.types';
 
-export interface TableListItem {
-  label: string;
-  title: string;
-  pageNumber?: number;
-}
-
 @Injectable()
 export class TableListGeneratorService {
-  generateTableList(tables: TableListItem[]): FormattedBlock[] {
+  /**
+   * Generate "List of Tables" page by scanning content blocks for TABLE entries.
+   */
+  generateTableList(
+    contentBlocks: FormattedBlock[],
+    fontFamily: string,
+    fontSizePt: number,
+  ): FormattedBlock[] {
+    const tables = contentBlocks.filter(
+      (b) => b.blockType.toUpperCase() === 'TABLE' && b.metadata?.sequence,
+    );
+
+    if (tables.length === 0) {
+      return [];
+    }
+
     const blocks: FormattedBlock[] = [];
 
-    blocks.push({
-      orderIndex: 0,
-      blockType: 'HEADING',
-      appliedRules: ['PAGE_LAYOUT', 'HEADING_STYLE'],
-      text: 'LIST OF TABLES',
-      metadata: {
-        level: 1,
-        fontFamily: 'Times New Roman',
-        fontSizePt: 16,
-        isBold: true,
-        isItalic: false,
-        alignment: 'center',
-        spacingBeforePt: 0,
-        spacingAfterPt: 24,
+    // Title
+    blocks.push(this.buildBlock(blocks.length, 'HEADING', 'TABLOLAR LİSTESİ', {
+      typography: {
+        fontFamily, fontSizePt: fontSizePt + 4, isBold: true,
+        alignment: 'center', lineSpacing: 1.5,
+        spacingBeforePt: 0, spacingAfterPt: 24, firstLineIndentCm: 0,
       },
-    });
+      heading: { level: 1, numberingPattern: null, isInline: false, startsNewPage: true },
+      templateSlot: 'TABLE_LIST',
+    }));
 
-    tables.forEach((table, index) => {
-      blocks.push({
-        orderIndex: index + 1,
-        blockType: 'PARAGRAPH',
-        appliedRules: ['PAGE_LAYOUT', 'TYPOGRAPHY'],
-        text: `${table.label} ${table.title}${table.pageNumber ? `\t${table.pageNumber}` : ''}`,
-        metadata: {
-          fontFamily: 'Times New Roman',
-          fontSizePt: 12,
-          alignment: 'left',
-          lineSpacing: 1.5,
-          firstLineIndentCm: 0,
+    for (const table of tables) {
+      const label = table.metadata?.sequence?.formattedLabel ?? '';
+      const text = table.text.replace(/^(Tablo|Table)\s*\d+([.:]\d+)*[.:]*\s*/i, '');
+
+      blocks.push(this.buildBlock(blocks.length, 'PARAGRAPH',
+        `${label}: ${text}`, {
+          typography: {
+            fontFamily, fontSizePt, isBold: false,
+            alignment: 'left', lineSpacing: 1.5,
+            spacingBeforePt: 2, spacingAfterPt: 2, firstLineIndentCm: 0,
+          },
+          templateSlot: 'TABLE_LIST',
         },
-      });
-    });
+      ));
+    }
 
     return blocks;
+  }
+
+  private buildBlock(
+    orderIndex: number,
+    blockType: string,
+    text: string,
+    metadata: Record<string, unknown>,
+  ): FormattedBlock {
+    return {
+      orderIndex,
+      blockType,
+      appliedRules: ['PAGE_LAYOUT', 'FIXED_PAGE'],
+      text,
+      metadata: metadata as FormattedBlock['metadata'],
+    };
   }
 }

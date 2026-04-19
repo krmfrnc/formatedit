@@ -12,3 +12,13 @@ apps/api/coverage
 apps/web/coverage
 *.log
 .DS_Store
+node_modules_bak
+**/node_modules_bak
+.next_bak
+**/.next_bak
+temp_md_backup
+**/temp_md_backup
+.claude/worktrees
+.antigravityignore
+.geminiignore
+pnpm-lock.bak

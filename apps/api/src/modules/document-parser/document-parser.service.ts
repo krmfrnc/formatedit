@@ -10,23 +10,37 @@ import { appLogger } from '../../common/logger';
 import { PrismaService } from '../../prisma.service';
 import { QueueService } from '../queue/queue.service';
 import {
-  citationPatterns,
+  citationApaPattern,
+  citationNumericPattern,
+  citationInlinePattern,
+  citationSuperscriptPattern,
   defaultFontSize,
   defaultTemplateOrder,
+  detectCitationStyle,
   equationPattern,
+  equationLatexPattern,
+  equationSymbolPattern,
+  equationNumberPattern,
   figurePattern,
+  figureCaptionPattern,
   fontSizeHeadingBoost,
   fontSizeHeadingThresholds,
   footnotePattern,
+  footnoteSuperscriptPattern,
+  footnoteTextPattern,
   headingPattern,
   maxParseBlockCount,
   semanticSectionRules,
   tablePattern,
+  tableCaptionPattern,
 } from './document-parser.constants';
 import { DocxAiHeadingService } from './docx-ai-heading.service';
 import { SectionMatcherService } from './section-matcher.service';
 import type {
+  CitationInfo,
   ConfidenceScoreResponse,
+  EquationInfo,
+  FootnoteInfo,
   OutlineNode,
   ParseDiagnosticsResponse,
   ParseMetricsResponse,
@@ -342,6 +356,8 @@ export class DocumentParserService {
         EQUATION: 0,
         FOOTNOTE: 0,
         CITATION: 0,
+        TABLE_CAPTION: 0,
+        FIGURE_CAPTION: 0,
       },
     );
 
@@ -349,18 +365,28 @@ export class DocumentParserService {
       Record<SemanticSectionType, number>
     >(
       (accumulator, block) => {
-        accumulator[block.semanticSectionType] += 1;
+        if (accumulator[block.semanticSectionType] !== undefined) {
+          accumulator[block.semanticSectionType] += 1;
+        }
         return accumulator;
       },
       {
         ABSTRACT: 0,
         INTRODUCTION: 0,
+        LITERATURE_REVIEW: 0,
         METHODS: 0,
         RESULTS: 0,
         DISCUSSION: 0,
         CONCLUSION: 0,
         REFERENCES: 0,
         APPENDIX: 0,
+        ACKNOWLEDGMENT: 0,
+        ABBREVIATIONS: 0,
+        TABLE_OF_CONTENTS: 0,
+        TABLE_LIST: 0,
+        FIGURE_LIST: 0,
+        CV: 0,
+        DECLARATION: 0,
         BODY: 0,
       },
     );
@@ -493,11 +519,14 @@ export class DocumentParserService {
       const numberingPattern = this.extractNumberingPattern(text);
       const sectionMatch = this.resolveSemanticSection(text);
 
-      const hasCitation = citationPatterns.some((pattern) =>
-        this.matchesPattern(pattern, text),
-      );
-      const hasFootnote = this.matchesPattern(footnotePattern, text);
-      const hasEquation = this.matchesPattern(equationPattern, text);
+      // Enhanced detection
+      const citations = this.extractCitations(text);
+      const equations = this.extractEquations(text);
+      const footnotes = this.extractFootnotes(text, runs);
+
+      const hasCitation = citations.length > 0;
+      const hasFootnote = footnotes.length > 0;
+      const hasEquation = equations.length > 0;
       const tableMatch = text.match(tablePattern);
       const figureMatch = text.match(figurePattern);
 
@@ -530,6 +559,14 @@ export class DocumentParserService {
         runs,
       });
 
+      // Extract caption text for table/figure captions
+      let captionText: string | undefined;
+      if (blockType === 'TABLE' && tableCaptionPattern.test(text)) {
+        captionText = text.replace(tableCaptionPattern, '').trim();
+      } else if (blockType === 'FIGURE' && figureCaptionPattern.test(text)) {
+        captionText = text.replace(figureCaptionPattern, '').trim();
+      }
+
       blocks.push({
         orderIndex: orderIndex++,
         blockType,
@@ -549,6 +586,10 @@ export class DocumentParserService {
         runs,
         numberingOverride: null,
         manualSequenceNumber: null,
+        citations: citations.length > 0 ? citations : undefined,
+        equations: equations.length > 0 ? equations : undefined,
+        footnotes: footnotes.length > 0 ? footnotes : undefined,
+        captionText,
       });
     });
 
@@ -715,6 +756,9 @@ export class DocumentParserService {
         (block) => block.confidenceScore < 0.55,
       ).length,
       truncated: blocks.length >= maxParseBlockCount,
+      citationStyle: detectCitationStyle(
+        blocks.map((block) => block.text).join(' '),
+      ),
     };
   }
 
@@ -878,7 +922,7 @@ export class DocumentParserService {
   private extractRuns(
     node: {
       text: () => string;
-      find: (selector: string) => { text: () => string };
+      find: (selector: string) => { text: () => string; length?: number };
     },
     tagName: string,
   ): ParsedRun[] {
@@ -889,6 +933,8 @@ export class DocumentParserService {
             {
               text: tableText,
               isBold: false,
+              isItalic: false,
+              isSuperscript: false,
               estimatedFontSize: 11,
             },
           ]
@@ -897,16 +943,24 @@ export class DocumentParserService {
 
     const fullText = node.text().replace(/\s+/g, ' ').trim();
     const boldText = node.find('strong, b').text().replace(/\s+/g, ' ').trim();
+    const italicText = node.find('em, i').text().replace(/\s+/g, ' ').trim();
+    const supText = node.find('sup').text().replace(/\s+/g, ' ').trim();
 
     if (!fullText) {
       return [];
     }
 
-    if (!boldText) {
+    const isBold = boldText.length / Math.max(fullText.length, 1) >= 0.4;
+    const isItalic = italicText.length / Math.max(fullText.length, 1) >= 0.4;
+    const isSuperscript = supText.length > 0;
+
+    if (!boldText && !italicText) {
       return [
         {
           text: fullText,
           isBold: false,
+          isItalic: false,
+          isSuperscript,
           estimatedFontSize: 11,
         },
       ];
@@ -915,10 +969,180 @@ export class DocumentParserService {
     return [
       {
         text: fullText,
-        isBold: boldText.length / Math.max(fullText.length, 1) >= 0.4,
-        estimatedFontSize: 12,
+        isBold,
+        isItalic,
+        isSuperscript,
+        estimatedFontSize: isBold ? 12 : 11,
       },
     ];
+  }
+
+  // ─── Enhanced Detection Methods ─────────────────────────────────
+
+  /**
+   * Extract all citation references from text with style identification.
+   */
+  private extractCitations(text: string): CitationInfo[] {
+    const citations: CitationInfo[] = [];
+
+    // IEEE / numeric: [1], [1-3], [1,2,3]
+    const numericRegex = new RegExp(citationNumericPattern.source, 'g');
+    let match: RegExpExecArray | null;
+    while ((match = numericRegex.exec(text)) !== null) {
+      const nums = match[0]
+        .replace(/[\[\]]/g, '')
+        .split(/[,;\s]+/)
+        .map((n) => parseInt(n, 10))
+        .filter((n) => !isNaN(n));
+      citations.push({
+        raw: match[0],
+        style: 'ieee',
+        numbers: nums,
+      });
+    }
+
+    // APA: (Author, 2024)
+    const apaRegex = new RegExp(citationApaPattern.source, 'g');
+    while ((match = apaRegex.exec(text)) !== null) {
+      const yearMatch = match[0].match(/(19|20)\d{2}[a-z]?/);
+      const authorPart = match[0].replace(/\(|\)/g, '').split(',')[0]?.trim();
+      citations.push({
+        raw: match[0],
+        style: 'apa',
+        authors: authorPart ? [authorPart] : undefined,
+        year: yearMatch ? yearMatch[0] : undefined,
+      });
+    }
+
+    // Inline: Author (2024)
+    const inlineRegex = new RegExp(citationInlinePattern.source, 'g');
+    while ((match = inlineRegex.exec(text)) !== null) {
+      const yearMatch = match[0].match(/(19|20)\d{2}[a-z]?/);
+      const authorPart = match[0].split('(')[0]?.trim();
+      citations.push({
+        raw: match[0],
+        style: 'inline',
+        authors: authorPart ? [authorPart] : undefined,
+        year: yearMatch ? yearMatch[0] : undefined,
+      });
+    }
+
+    // Superscript markers
+    const supRegex = new RegExp(citationSuperscriptPattern.source, 'g');
+    while ((match = supRegex.exec(text)) !== null) {
+      citations.push({
+        raw: match[0],
+        style: 'vancouver',
+      });
+    }
+
+    return citations;
+  }
+
+  /**
+   * Extract all equation markers from text.
+   */
+  private extractEquations(text: string): EquationInfo[] {
+    const equations: EquationInfo[] = [];
+
+    // LaTeX patterns
+    if (this.matchesPattern(equationLatexPattern, text)) {
+      const latexMatch = text.match(equationLatexPattern);
+      if (latexMatch) {
+        const numMatch = text.match(equationNumberPattern);
+        equations.push({
+          raw: latexMatch[0],
+          source: 'latex',
+          equationNumber: numMatch ? numMatch[0].replace(/[()]/g, '') : undefined,
+        });
+      }
+    }
+
+    // Mathematical Unicode symbols
+    if (this.matchesPattern(equationSymbolPattern, text)) {
+      const symbolMatch = text.match(equationSymbolPattern);
+      if (symbolMatch) {
+        const numMatch = text.match(equationNumberPattern);
+        equations.push({
+          raw: symbolMatch[0],
+          source: 'symbol',
+          equationNumber: numMatch ? numMatch[0].replace(/[()]/g, '') : undefined,
+        });
+      }
+    }
+
+    // Keyword-based (basic operator/function names)
+    if (equations.length === 0 && this.matchesPattern(equationPattern, text)) {
+      // Only use keyword detection as fallback if no stronger signals found
+      if (text.length <= 180) {
+        const numMatch = text.match(equationNumberPattern);
+        equations.push({
+          raw: text,
+          source: 'keyword',
+          equationNumber: numMatch ? numMatch[0].replace(/[()]/g, '') : undefined,
+        });
+      }
+    }
+
+    return equations;
+  }
+
+  /**
+   * Extract footnote markers from text and runs.
+   */
+  private extractFootnotes(text: string, runs: ParsedRun[]): FootnoteInfo[] {
+    const footnotes: FootnoteInfo[] = [];
+
+    // Superscript runs that look like footnote markers
+    for (const run of runs) {
+      if (run.isSuperscript) {
+        const numMatch = run.text.match(/\d+/);
+        if (numMatch) {
+          footnotes.push({
+            marker: run.text,
+            source: 'superscript',
+            number: parseInt(numMatch[0], 10),
+          });
+        }
+      }
+    }
+
+    // Unicode superscript characters
+    if (this.matchesPattern(footnoteSuperscriptPattern, text)) {
+      const supMatch = text.match(footnoteSuperscriptPattern);
+      if (supMatch && !footnotes.some((f) => f.marker === supMatch[0])) {
+        footnotes.push({
+          marker: supMatch[0],
+          source: 'superscript',
+        });
+      }
+    }
+
+    // Bracket markers: [1], [2]
+    if (this.matchesPattern(footnotePattern, text)) {
+      const bracketMatch = text.match(/\[(\d+)\]/);
+      if (bracketMatch && !footnotes.some((f) => f.number === parseInt(bracketMatch[1], 10))) {
+        footnotes.push({
+          marker: bracketMatch[0],
+          source: 'bracket',
+          number: parseInt(bracketMatch[1], 10),
+        });
+      }
+    }
+
+    // Footnote text pattern (paragraph starting with number)
+    if (this.matchesPattern(footnoteTextPattern, text)) {
+      const numMatch = text.match(/^\s*(\d+)/);
+      if (numMatch) {
+        footnotes.push({
+          marker: numMatch[1],
+          source: 'text',
+          number: parseInt(numMatch[1], 10),
+        });
+      }
+    }
+
+    return footnotes;
   }
 
   private extractNumberingPattern(text: string): string | null {

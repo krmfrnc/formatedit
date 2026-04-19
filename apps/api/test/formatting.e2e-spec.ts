@@ -3,7 +3,22 @@ import { FormattingService } from '../src/modules/formatting/formatting.service'
 import { SequenceNumberingApplierService } from '../src/modules/formatting/sequence-numbering-applier.service';
 import { ValidationCheckerService } from '../src/modules/formatting/validation-checker.service';
 import { PrismaService } from '../src/prisma.service';
-import type { FormattedBlock } from '../src/modules/formatting/formatting.types';
+import { PageLayoutApplierService } from '../src/modules/formatting/page-layout-applier.service';
+import { TypographyApplierService } from '../src/modules/formatting/typography-applier.service';
+import { HeadingStyleApplierService } from '../src/modules/formatting/heading-style-applier.service';
+import { CrossReferenceUpdaterService } from '../src/modules/formatting/cross-reference-updater.service';
+import { SectionOrderApplierService } from '../src/modules/formatting/section-order-applier.service';
+import { PageNumberingApplierService } from '../src/modules/formatting/page-numbering-applier.service';
+import { CoverPageGeneratorService } from '../src/modules/formatting/cover-page-generator.service';
+import { ApprovalPageGeneratorService } from '../src/modules/formatting/approval-page-generator.service';
+import { DeclarationGeneratorService } from '../src/modules/formatting/declaration-generator.service';
+import { AbstractPageGeneratorService } from '../src/modules/formatting/abstract-page-generator.service';
+import { TableOfContentsGeneratorService } from '../src/modules/formatting/table-of-contents-generator.service';
+import { TableListGeneratorService } from '../src/modules/formatting/table-list-generator.service';
+import { FigureListGeneratorService } from '../src/modules/formatting/figure-list-generator.service';
+import { AbbreviationsGeneratorService } from '../src/modules/formatting/abbreviations-generator.service';
+import { CVGeneratorService } from '../src/modules/formatting/cv-generator.service';
+import type { FormattedBlock, SequenceNumberingSettings } from '../src/modules/formatting/formatting.types';
 
 describe('FormattingService', () => {
   let service: FormattingService;
@@ -21,15 +36,32 @@ describe('FormattingService', () => {
       providers: [
         FormattingService,
         { provide: PrismaService, useValue: mockPrisma },
+        PageLayoutApplierService,
+        TypographyApplierService,
+        HeadingStyleApplierService,
+        SequenceNumberingApplierService,
+        CrossReferenceUpdaterService,
+        SectionOrderApplierService,
+        PageNumberingApplierService,
+        ValidationCheckerService,
+        CoverPageGeneratorService,
+        ApprovalPageGeneratorService,
+        DeclarationGeneratorService,
+        AbstractPageGeneratorService,
+        TableOfContentsGeneratorService,
+        TableListGeneratorService,
+        FigureListGeneratorService,
+        AbbreviationsGeneratorService,
+        CVGeneratorService,
       ],
     }).compile();
 
     service = module.get<FormattingService>(FormattingService);
   });
 
-  describe('validateDocument', () => {
+  describe('preValidate', () => {
     it('returns error for empty document', () => {
-      const result = service.validateDocument([]);
+      const result = service.preValidate([]);
       expect(result).toHaveLength(1);
       expect(result[0].code).toBe('EMPTY_DOCUMENT');
       expect(result[0].severity).toBe('ERROR');
@@ -37,14 +69,14 @@ describe('FormattingService', () => {
 
     it('returns errors for invalid blocks', () => {
       const blocks = [null, 'not-an-object', 42] as unknown[];
-      const result = service.validateDocument(blocks);
+      const result = service.preValidate(blocks);
       expect(result.length).toBeGreaterThan(0);
       expect(result.some((e) => e.code === 'INVALID_BLOCK')).toBe(true);
     });
 
     it('returns warnings for blocks missing text', () => {
       const blocks = [{ blockType: 'PARAGRAPH' }];
-      const result = service.validateDocument(blocks);
+      const result = service.preValidate(blocks);
       expect(result.some((e) => e.code === 'MISSING_BLOCK_TEXT')).toBe(true);
     });
 
@@ -53,7 +85,7 @@ describe('FormattingService', () => {
         { blockType: 'HEADING', text: 'Introduction', level: 1 },
         { blockType: 'PARAGRAPH', text: 'Body text here' },
       ];
-      const result = service.validateDocument(blocks);
+      const result = service.preValidate(blocks);
       expect(result).toHaveLength(0);
     });
   });
@@ -103,6 +135,14 @@ describe('SequenceNumberingApplierService', () => {
     );
   });
 
+  const defaultSettings: SequenceNumberingSettings = {
+    mode: 'sequential',
+    tableStart: 1,
+    figureStart: 1,
+    equationStart: 1,
+    chapterSeparator: '.',
+  };
+
   it('numbers tables sequentially', () => {
     const blocks: FormattedBlock[] = [
       {
@@ -110,58 +150,55 @@ describe('SequenceNumberingApplierService', () => {
         blockType: 'TABLE',
         appliedRules: [],
         text: 'Sample data',
+        metadata: {},
       },
       {
         orderIndex: 1,
         blockType: 'TABLE',
         appliedRules: [],
         text: 'More data',
+        metadata: {},
       },
     ];
 
-    const result = service.applySequenceNumbering(blocks, {
-      tableStart: 1,
-      figureStart: 1,
-      equationStart: 1,
-    });
+    const result = service.applySequenceNumbering(blocks, defaultSettings);
 
-    expect(result[0].metadata?.sequenceNumber).toBe(1);
-    expect(result[1].metadata?.sequenceNumber).toBe(2);
-    expect(result[0].metadata?.sequenceType).toBe('table');
+    expect(result[0].metadata?.sequence?.sequenceNumber).toBe(1);
+    expect(result[1].metadata?.sequence?.sequenceNumber).toBe(2);
+    expect(result[0].metadata?.sequence?.sequenceType).toBe('table');
   });
 
-  it('numbers figures sequentially', () => {
+  it('numbers figures with custom start', () => {
     const blocks: FormattedBlock[] = [
-      { orderIndex: 0, blockType: 'FIGURE', appliedRules: [], text: 'Chart' },
+      { orderIndex: 0, blockType: 'FIGURE', appliedRules: [], text: 'Chart', metadata: {} },
     ];
 
     const result = service.applySequenceNumbering(blocks, {
-      tableStart: 1,
+      ...defaultSettings,
       figureStart: 5,
-      equationStart: 1,
     });
 
-    expect(result[0].metadata?.sequenceNumber).toBe(5);
-    expect(result[0].metadata?.sequenceType).toBe('figure');
+    expect(result[0].metadata?.sequence?.sequenceNumber).toBe(5);
+    expect(result[0].metadata?.sequence?.sequenceType).toBe('figure');
   });
 
-  it('numbers equations sequentially', () => {
+  it('numbers equations with custom start', () => {
     const blocks: FormattedBlock[] = [
       {
         orderIndex: 0,
         blockType: 'EQUATION',
         appliedRules: [],
         text: 'E = mc^2',
+        metadata: {},
       },
     ];
 
     const result = service.applySequenceNumbering(blocks, {
-      tableStart: 1,
-      figureStart: 1,
+      ...defaultSettings,
       equationStart: 10,
     });
 
-    expect(result[0].metadata?.sequenceNumber).toBe(10);
+    expect(result[0].metadata?.sequence?.sequenceNumber).toBe(10);
   });
 
   it('respects manual overrides', () => {
@@ -175,13 +212,9 @@ describe('SequenceNumberingApplierService', () => {
       },
     ];
 
-    const result = service.applySequenceNumbering(blocks, {
-      tableStart: 1,
-      figureStart: 1,
-      equationStart: 1,
-    });
+    const result = service.applySequenceNumbering(blocks, defaultSettings);
 
-    expect(result[0].metadata?.sequenceNumber).toBe(42);
+    expect(result[0].metadata?.sequence?.sequenceNumber).toBe(42);
   });
 
   it('leaves non-sequence blocks unchanged', () => {
@@ -191,16 +224,13 @@ describe('SequenceNumberingApplierService', () => {
         blockType: 'PARAGRAPH',
         appliedRules: [],
         text: 'Regular text',
+        metadata: {},
       },
     ];
 
-    const result = service.applySequenceNumbering(blocks, {
-      tableStart: 1,
-      figureStart: 1,
-      equationStart: 1,
-    });
+    const result = service.applySequenceNumbering(blocks, defaultSettings);
 
-    expect(result[0]).toEqual(blocks[0]);
+    expect(result[0].text).toBe('Regular text');
   });
 });
 
@@ -223,11 +253,15 @@ describe('ValidationCheckerService', () => {
           blockType: 'PARAGRAPH',
           appliedRules: [],
           text: 'Short text',
+          metadata: {},
         },
       ];
 
       const result = service.runValidationChecks(blocks, {
-        restrictions: { minWordCount: 100, maxWordCount: 1000 },
+        restrictions: { mainTextWordLimitMin: 100, mainTextWordLimitMax: 1000 },
+      }, {
+        mainTextWordLimitMin: 100,
+        mainTextWordLimitMax: 1000,
       });
 
       expect(result.some((e) => e.code === 'WORD_COUNT_BELOW_MINIMUM')).toBe(
@@ -243,11 +277,15 @@ describe('ValidationCheckerService', () => {
           blockType: 'PARAGRAPH',
           appliedRules: [],
           text: longText,
+          metadata: {},
         },
       ];
 
       const result = service.runValidationChecks(blocks, {
-        restrictions: { minWordCount: 1, maxWordCount: 100 },
+        restrictions: { mainTextWordLimitMin: 1, mainTextWordLimitMax: 100 },
+      }, {
+        mainTextWordLimitMin: 1,
+        mainTextWordLimitMax: 100,
       });
 
       expect(result.some((e) => e.code === 'WORD_COUNT_EXCEEDS_MAXIMUM')).toBe(
@@ -264,14 +302,14 @@ describe('ValidationCheckerService', () => {
           blockType: 'TABLE',
           appliedRules: [],
           text: 'Table 1',
-          metadata: { sequenceNumber: 1, sequenceType: 'table' },
+          metadata: { sequence: { sequenceNumber: 1, sequenceType: 'table', chapterNumber: null, formattedLabel: 'Tablo 1' } },
         },
         {
           orderIndex: 1,
           blockType: 'TABLE',
           appliedRules: [],
           text: 'Table 1 again',
-          metadata: { sequenceNumber: 1, sequenceType: 'table' },
+          metadata: { sequence: { sequenceNumber: 1, sequenceType: 'table', chapterNumber: null, formattedLabel: 'Tablo 1' } },
         },
       ];
 
@@ -289,14 +327,14 @@ describe('ValidationCheckerService', () => {
           blockType: 'FIGURE',
           appliedRules: [],
           text: 'Figure 1',
-          metadata: { sequenceNumber: 1, sequenceType: 'figure' },
+          metadata: { sequence: { sequenceNumber: 1, sequenceType: 'figure', chapterNumber: null, formattedLabel: 'Şekil 1' } },
         },
         {
           orderIndex: 1,
           blockType: 'FIGURE',
           appliedRules: [],
           text: 'Figure 3',
-          metadata: { sequenceNumber: 3, sequenceType: 'figure' },
+          metadata: { sequence: { sequenceNumber: 3, sequenceType: 'figure', chapterNumber: null, formattedLabel: 'Şekil 3' } },
         },
       ];
 
@@ -319,7 +357,7 @@ describe('ValidationCheckerService', () => {
       ];
 
       const result = service.runValidationChecks(blocks, {
-        fixedPages: { abstract: true },
+        fixedPages: { abstractTr: true },
         sectionOrdering: { items: ['references'] },
       });
 
@@ -333,12 +371,12 @@ describe('ValidationCheckerService', () => {
           blockType: 'HEADING',
           appliedRules: [],
           text: 'Abstract',
-          metadata: { semanticSectionType: 'ABSTRACT' },
+          metadata: { semanticSectionType: 'ABSTRACT_TR' },
         },
       ];
 
       const result = service.runValidationChecks(blocks, {
-        fixedPages: { abstract: true },
+        fixedPages: { abstractTr: true },
         sectionOrdering: { items: [] },
       });
 

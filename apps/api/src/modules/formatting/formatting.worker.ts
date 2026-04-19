@@ -10,6 +10,11 @@ import { PrismaService } from '../../prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { DocxOutputGeneratorService } from './docx-output-generator.service';
 import { PdfOutputGeneratorService } from './pdf-output-generator.service';
+import type { WizardData } from './formatting.types';
+import {
+  defaultPageLayout,
+  defaultTypography,
+} from './formatting.constants';
 
 @Injectable()
 export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -46,6 +51,7 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
           attempt: job.attemptsMade,
         });
 
+        // 1. Load template
         const template = await this.prismaService.template.findUnique({
           where: { id: templateId },
         });
@@ -57,14 +63,24 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
         const templateParameters =
           template.templateParameters as unknown as Record<string, unknown>;
 
+        // 2. Extract wizard data from job payload
+        const wizardData = (job.data as unknown as Record<string, unknown>)
+          .wizardData as WizardData | undefined;
+
+        // 3. Run the formatting pipeline
+        await job.updateProgress(10);
+
         const result = await this.formattingService.applyFormatting(
           documentId,
           documentVersionId,
           templateParameters,
+          wizardData ?? {},
         );
 
+        await job.updateProgress(50);
+
         if (!result.success) {
-          appLogger.warn('Formatting job completed with errors', {
+          appLogger.warn('Formatting pipeline completed with errors', {
             documentId,
             documentVersionId,
             errorCount: result.errors.length,
@@ -78,15 +94,30 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
           }
         }
 
-        const formattedVersionId = randomUUID();
+        // 4. Generate DOCX output
+        const docxSettings = this.resolveDocxGeneratorSettings(templateParameters);
+
         const docxBuffer = await this.docxOutputGeneratorService.generateDocx(
+          result.generatedPages,
           result.formattedBlocks,
-          this.resolveDocxGeneratorSettings(templateParameters),
+          docxSettings,
         );
+
+        await job.updateProgress(75);
+
+        // 5. Generate PDF output
         const pdfBuffer = this.pdfOutputGeneratorService.generatePdf(
-          result.formattedBlocks,
-          this.resolveDocxGeneratorSettings(templateParameters),
+          [...result.generatedPages, ...result.formattedBlocks],
+          {
+            fontFamily: docxSettings.fontFamily,
+            fontSizePt: docxSettings.fontSizePt,
+          },
         );
+
+        await job.updateProgress(85);
+
+        // 6. Upload to storage
+        const formattedVersionId = randomUUID();
 
         const docxStorageKey = this.buildFormattedStorageKey(
           documentId,
@@ -112,6 +143,9 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
           contentType: 'application/pdf',
         });
 
+        await job.updateProgress(95);
+
+        // 7. Create formatted version record
         await this.prismaService.documentVersion.create({
           data: {
             id: formattedVersionId,
@@ -127,9 +161,11 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
               templateId,
               formattedBy: requestedBy,
               durationMs: result.durationMs,
-              blockCount: result.formattedBlocks.length,
+              contentBlockCount: result.formattedBlocks.length,
+              generatedPageCount: result.generatedPages.length,
               errors: result.errors,
               warnings: result.warnings,
+              infos: result.infos,
               pdfStorageKey,
               pdfContentType: 'application/pdf',
               pdfSizeBytes: pdfBuffer.byteLength,
@@ -137,11 +173,14 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
           },
         });
 
+        await job.updateProgress(100);
+
         appLogger.info('Formatting job completed successfully', {
           documentId,
           documentVersionId,
           durationMs: result.durationMs,
-          blockCount: result.formattedBlocks.length,
+          contentBlockCount: result.formattedBlocks.length,
+          generatedPageCount: result.generatedPages.length,
           docxStorageKey,
           pdfStorageKey,
         });
@@ -149,19 +188,54 @@ export class FormattingWorkerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private resolveDocxGeneratorSettings(templateParameters: Record<string, unknown>): {
+  private resolveDocxGeneratorSettings(
+    templateParameters: Record<string, unknown>,
+  ): {
     fontFamily: string;
     fontSizePt: number;
+    pageLayout: {
+      paperSize: string;
+      orientation: 'portrait' | 'landscape';
+      marginTopCm: number;
+      marginBottomCm: number;
+      marginLeftCm: number;
+      marginRightCm: number;
+      headerMarginCm: number;
+      footerMarginCm: number;
+      gutterCm: number;
+    };
   } {
     const typography = (templateParameters.typography ?? {}) as Record<
       string,
       unknown
     >;
+    const pageLayout = (templateParameters.pageLayout ?? {}) as Record<
+      string,
+      unknown
+    >;
 
     return {
-      fontFamily:
-        (typography.fontFamily as string) ?? 'Times New Roman',
-      fontSizePt: (typography.fontSizePt as number) ?? 12,
+      fontFamily: (typography.fontFamily as string) ?? defaultTypography.fontFamily,
+      fontSizePt: (typography.fontSizePt as number) ?? defaultTypography.fontSizePt,
+      pageLayout: {
+        paperSize: (pageLayout.paperSize as string) ?? defaultPageLayout.paperSize,
+        orientation:
+          (pageLayout.orientation as 'portrait' | 'landscape') ??
+          defaultPageLayout.orientation,
+        marginTopCm:
+          (pageLayout.marginTopCm as number) ?? defaultPageLayout.marginTopCm,
+        marginBottomCm:
+          (pageLayout.marginBottomCm as number) ?? defaultPageLayout.marginBottomCm,
+        marginLeftCm:
+          (pageLayout.marginLeftCm as number) ?? defaultPageLayout.marginLeftCm,
+        marginRightCm:
+          (pageLayout.marginRightCm as number) ?? defaultPageLayout.marginRightCm,
+        headerMarginCm:
+          (pageLayout.headerMarginCm as number) ?? defaultPageLayout.headerMarginCm,
+        footerMarginCm:
+          (pageLayout.footerMarginCm as number) ?? defaultPageLayout.footerMarginCm,
+        gutterCm: (pageLayout.gutterCm as number) ?? defaultPageLayout.gutterCm,
+      },
     };
   }
 

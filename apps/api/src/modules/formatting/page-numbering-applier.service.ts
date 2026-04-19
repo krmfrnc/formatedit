@@ -1,87 +1,97 @@
 import { Injectable } from '@nestjs/common';
-import type { FormattedBlock } from './formatting.types';
-import type { EditorPageNumberingSettings } from '@formatedit/shared';
+import type {
+  FormattedBlock,
+  PageNumberingSettings,
+  PageNumberZone,
+} from './formatting.types';
 
 @Injectable()
 export class PageNumberingApplierService {
+  /**
+   * Applies page numbering metadata to blocks using the zone system.
+   * Each zone defines a range of pages with a specific numbering style
+   * (roman, arabic, none), position, and start number.
+   */
   applyPageNumbering(
     blocks: FormattedBlock[],
-    settings: EditorPageNumberingSettings,
+    settings: PageNumberingSettings,
   ): FormattedBlock[] {
     let currentPage = 1;
-    let isBodyStarted = false;
 
     return blocks.map((block) => {
-      const blockPage = this.assignBlockPage(block, currentPage);
-      const pageNumber = this.resolvePageNumber(
-        blockPage,
-        settings,
-        isBodyStarted,
-      );
+      const zone = this.findZone(settings.zones, currentPage);
+      const isUnnumbered = settings.unnumberedPages.includes(currentPage);
 
-      if (blockPage >= settings.bodyStartPage) {
-        isBodyStarted = true;
-      }
+      const pageNumber = isUnnumbered || !zone
+        ? null
+        : this.formatPageNumber(currentPage, zone);
 
-      currentPage = blockPage + 1;
+      const pageNumberStyle = isUnnumbered
+        ? 'none' as const
+        : zone?.style ?? ('none' as const);
 
-      return {
+      const result: FormattedBlock = {
         ...block,
         metadata: {
-          ...(block.metadata ?? {}),
-          pageNumber,
-          pageNumberingStyle: this.getPageNumberingStyle(
-            blockPage,
-            settings,
-            isBodyStarted,
-          ),
+          ...block.metadata,
+          pageNumber: {
+            pageNumber,
+            pageNumberStyle,
+            pageNumberPosition: zone?.position ?? 'bottom-center',
+            pageNumberFontFamily: zone?.fontFamily ?? 'Times New Roman',
+            pageNumberFontSizePt: zone?.fontSizePt ?? 12,
+          },
         },
+        appliedRules: [...block.appliedRules, 'PAGE_NUMBERING'],
       };
+
+      currentPage += 1;
+      return result;
     });
   }
 
-  private assignBlockPage(_block: FormattedBlock, currentPage: number): number {
-    return currentPage;
-  }
-
-  private resolvePageNumber(
+  /**
+   * Find the active zone for a given page number.
+   */
+  private findZone(
+    zones: PageNumberZone[],
     page: number,
-    settings: EditorPageNumberingSettings,
-    isBodyStarted: boolean,
-  ): string | null {
-    if (settings.unnumberedPages.includes(page)) {
-      return null;
+  ): PageNumberZone | null {
+    for (const zone of zones) {
+      const inStart = page >= zone.startPage;
+      const inEnd = zone.endPage === null || page <= zone.endPage;
+
+      if (inStart && inEnd) {
+        return zone;
+      }
     }
 
-    if (isBodyStarted && page >= settings.bodyStartPage) {
-      const arabicNumber =
-        page - settings.bodyStartPage + settings.bodyStartNumber;
-      return String(arabicNumber);
-    }
-
-    if (settings.frontMatterStyle === 'roman') {
-      return this.toRoman(page);
-    }
-
-    return String(page);
+    return null;
   }
 
-  private getPageNumberingStyle(
-    page: number,
-    settings: EditorPageNumberingSettings,
-    isBodyStarted: boolean,
-  ): 'roman' | 'arabic' | 'none' {
-    if (settings.unnumberedPages.includes(page)) {
-      return 'none';
+  /**
+   * Format a page number based on the zone's style and start number.
+   */
+  private formatPageNumber(
+    absolutePage: number,
+    zone: PageNumberZone,
+  ): string {
+    const relativeNumber = absolutePage - zone.startPage + zone.startNumber;
+
+    if (zone.style === 'none') {
+      return '';
     }
 
-    if (isBodyStarted && page >= settings.bodyStartPage) {
-      return 'arabic';
+    if (zone.style === 'roman') {
+      return this.toRoman(relativeNumber).toLowerCase();
     }
 
-    return settings.frontMatterStyle;
+    return String(relativeNumber);
   }
 
+  /**
+   * Convert integer to Roman numerals.
+   */
   private toRoman(num: number): string {
     if (num <= 0) return String(num);
 

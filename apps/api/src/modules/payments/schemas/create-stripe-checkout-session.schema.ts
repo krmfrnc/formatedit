@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const createStripeCheckoutSessionSchema = z.object({
   analysisTicketId: z.string().trim().min(1),
-  successUrl: z.url(),
-  cancelUrl: z.url(),
+  successUrl: z.string().url(),
+  cancelUrl: z.string().url(),
   currency: z
     .string()
     .trim()

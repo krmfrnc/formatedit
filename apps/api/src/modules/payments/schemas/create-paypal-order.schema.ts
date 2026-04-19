@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const createPayPalOrderSchema = z.object({
   analysisTicketId: z.string().trim().min(1),
-  returnUrl: z.url(),
-  cancelUrl: z.url(),
+  returnUrl: z.string().url(),
+  cancelUrl: z.string().url(),
   currency: z
     .string()
     .trim()
